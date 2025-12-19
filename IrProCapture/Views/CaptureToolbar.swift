@@ -11,6 +11,7 @@ struct CaptureToolbar: View {
     @EnvironmentObject var model: Camera
     @EnvironmentObject var uiState: UIState
     @State private var alertMessage: String? = nil
+    @State private var showRangeControls = false
 
     var body: some View {
         HStack(spacing: 20) {
@@ -86,6 +87,21 @@ struct CaptureToolbar: View {
             .disabled(!uiState.isRunning)
             .buttonStyle(.bordered)
             .help("Next Orientation")
+            
+            // Range control button
+            Button(action: {
+                showRangeControls.toggle()
+            }) {
+                Image(systemName: "thermometer.medium")
+                    .font(.title)
+                    .foregroundColor(uiState.manualRangeEnabled ? .blue : .primary)
+            }
+            .disabled(!uiState.isRunning)
+            .buttonStyle(.bordered)
+            .help("Display Range")
+            .popover(isPresented: $showRangeControls) {
+                TemperatureRangeControls()
+            }
             
             Spacer()
         }
