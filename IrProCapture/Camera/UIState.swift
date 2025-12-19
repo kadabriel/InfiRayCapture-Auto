@@ -87,6 +87,33 @@ class UIState: ObservableObject {
         }
     }
     
+    /// Whether to use manual temperature range for display
+    @Published var manualRangeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(manualRangeEnabled, forKey: "manualRangeEnabled")
+        }
+    }
+    
+    /// Manual minimum temperature for display
+    @Published var manualMinTemp: Float {
+        didSet {
+            if manualMinTemp >= manualMaxTemp {
+                manualMinTemp = manualMaxTemp - 0.1
+            }
+            UserDefaults.standard.set(manualMinTemp, forKey: "manualMinTemp")
+        }
+    }
+    
+    /// Manual maximum temperature for display
+    @Published var manualMaxTemp: Float {
+        didSet {
+            if manualMaxTemp <= manualMinTemp {
+                manualMaxTemp = manualMinTemp + 0.1
+            }
+            UserDefaults.standard.set(manualMaxTemp, forKey: "manualMaxTemp")
+        }
+    }
+    
     /// Indicates whether the camera is currently running
     @Published var isRunning = false
     
@@ -128,6 +155,10 @@ class UIState: ObservableObject {
             self.temperatureFormat = .celsius
             UserDefaults.standard.set(TemperatureFormat.celsius.rawValue, forKey: "temperatureFormat")
         }
+
+        self.manualRangeEnabled = UserDefaults.standard.bool(forKey: "manualRangeEnabled")
+        self.manualMinTemp = UserDefaults.standard.object(forKey: "manualMinTemp") as? Float ?? 20.0
+        self.manualMaxTemp = UserDefaults.standard.object(forKey: "manualMaxTemp") as? Float ?? 40.0
     }
     
     /// Cycles to the next orientation option

@@ -156,8 +156,8 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
         // Convert temperatures to a color mapped image
         guard let processedImage = CIImage.fromTemperatures(
                 temperatures: tempResult.temperatures,
-                minTemp: tempResult.min,
-                maxTemp: tempResult.max,
+                minTemp: uiState.manualRangeEnabled ? uiState.manualMinTemp : tempResult.min,
+                maxTemp: uiState.manualRangeEnabled ? uiState.manualMaxTemp : tempResult.max,
                 width: 256,
                 height: 192,
                 scale: SCALE,

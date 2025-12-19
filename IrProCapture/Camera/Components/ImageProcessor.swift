@@ -27,8 +27,9 @@ extension CIImage {
         var pixelData = [UInt8](repeating: 0, count: width * height * 4)
         let range = max(maxTemp - minTemp, 1.0)
         let scaledTemperatures = vDSP.multiply(255.0 / range, vDSP.add(-minTemp, temperatures))
+        let clippedTemperatures = vDSP.clip(scaledTemperatures, to: 0.0...255.0)
         for index in 0..<width*height {
-            pixelData[index] = UInt8(scaledTemperatures[index])
+            pixelData[index] = UInt8(clippedTemperatures[index])
         }
         let bytesPerRow = width
         let colorSpace = CGColorSpaceCreateDeviceGray()

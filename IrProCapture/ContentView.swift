@@ -43,13 +43,13 @@ struct ContentView: View {
                 Divider()
                 ColorMapDisplay(
                     colorMap: uiState.currentColorMap,
-                    maxTemperature: model.maxTemperature,
-                    minTemperature: model.minTemperature,
+                    maxTemperature: uiState.manualRangeEnabled ? uiState.manualMaxTemp : model.maxTemperature,
+                    minTemperature: uiState.manualRangeEnabled ? uiState.manualMinTemp : model.minTemperature,
                     format: uiState.temperatureFormat)
                 TemperatureHistogramChart(
                     histogram: model.histogram,
-                    minTemperature: model.minTemperature,
-                    maxTemperature: model.maxTemperature,
+                    minTemperature: uiState.manualRangeEnabled ? uiState.manualMinTemp : model.minTemperature,
+                    maxTemperature: uiState.manualRangeEnabled ? uiState.manualMaxTemp : model.maxTemperature,
                     format: uiState.temperatureFormat
                 )
             }

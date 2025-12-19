@@ -21,15 +21,23 @@ struct ColorMapDisplay: View {
     }
     
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             VStack {
                 Text(format.format(format.convert(maxTemperature)))
+                    .font(.caption)
+                    .monospacedDigit()
                 Spacer()
                 Text(format.format(format.convert(minTemperature)))
+                    .font(.caption)
+                    .monospacedDigit()
             }
+            .frame(minWidth: 50)
+            
             LinearGradient(gradient: Gradient(colors: colorMap.colors.map { Color(red: CGFloat($0.r), green: CGFloat($0.g), blue: CGFloat($0.b)) }), startPoint: .bottom, endPoint: .top)
-                .frame(width: 50)
+                .frame(width: 40)
+                .cornerRadius(4)
         }
+        .padding(.vertical, 4)
     }
 }
 
