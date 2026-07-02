@@ -14,6 +14,14 @@ struct ContentView: View {
     @EnvironmentObject var uiState: UIState
     @State private var alertMessage: String? = nil
 
+    private var displayMinTemperature: Float {
+        uiState.manualRangeEnabled ? uiState.manualMinTemp : model.displayMinTemperature
+    }
+
+    private var displayMaxTemperature: Float {
+        uiState.manualRangeEnabled ? uiState.manualMaxTemp : model.displayMaxTemperature
+    }
+
     var body: some View {
         VStack {
             CaptureToolbar()
@@ -43,13 +51,13 @@ struct ContentView: View {
                 Divider()
                 ColorMapDisplay(
                     colorMap: uiState.currentColorMap,
-                    maxTemperature: uiState.manualRangeEnabled ? uiState.manualMaxTemp : model.maxTemperature,
-                    minTemperature: uiState.manualRangeEnabled ? uiState.manualMinTemp : model.minTemperature,
+                    maxTemperature: displayMaxTemperature,
+                    minTemperature: displayMinTemperature,
                     format: uiState.temperatureFormat)
                 TemperatureHistogramChart(
                     histogram: model.histogram,
-                    minTemperature: uiState.manualRangeEnabled ? uiState.manualMinTemp : model.minTemperature,
-                    maxTemperature: uiState.manualRangeEnabled ? uiState.manualMaxTemp : model.maxTemperature,
+                    minTemperature: displayMinTemperature,
+                    maxTemperature: displayMaxTemperature,
                     format: uiState.temperatureFormat
                 )
             }

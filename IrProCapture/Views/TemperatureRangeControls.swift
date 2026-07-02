@@ -6,10 +6,35 @@ struct TemperatureRangeControls: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle("Manual Range", isOn: $uiState.manualRangeEnabled)
+            Toggle("Automatic Range", isOn: Binding(
+                get: { !uiState.manualRangeEnabled },
+                set: { enabled in
+                    uiState.manualRangeEnabled = !enabled
+                    if enabled {
+                        model.resetAutomaticRange()
+                    }
+                }
+            ))
                 .toggleStyle(.checkbox)
-            
-            if uiState.manualRangeEnabled {
+
+            if !uiState.manualRangeEnabled {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Auto Range:")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(uiState.temperatureFormat.format(uiState.temperatureFormat.convert(model.displayMinTemperature))) - \(uiState.temperatureFormat.format(uiState.temperatureFormat.convert(model.displayMaxTemperature)))")
+                            .font(.subheadline)
+                            .monospacedDigit()
+                    }
+
+                    Button("Reset Auto Range") {
+                        model.resetAutomaticRange()
+                    }
+                    .buttonStyle(.link)
+                }
+                .padding(.vertical, 10)
+            } else {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {

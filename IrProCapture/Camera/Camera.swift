@@ -39,6 +39,10 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
     
     /// The average temperature across the entire frame
     @Published var averageTemperature: Float = 0
+
+    /// The temperature range currently used to colorize the image.
+    @Published var displayMinTemperature: Float = 20
+    @Published var displayMaxTemperature: Float = 40
         
     /// Temperature grid for displaying temperature values in a grid pattern
     @Published var temperatureGrid = TemperatureGrid()
@@ -56,6 +60,8 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
     private let imageCapturer = ImageCapturer()
     private var isProcessing = false
     private var capture: Capture?
+    private var automaticDisplayRange: (min: Float, max: Float)?
+    private var lastManualRangeEnabled = false
         
     init(uiState: UIState)
     {
@@ -81,6 +87,11 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
             capture?.stop()
             uiState.isRunning = false
         }
+    }
+
+    /// Resets automatic range tracking so the next frame chooses a fresh range.
+    func resetAutomaticRange() {
+        automaticDisplayRange = nil
     }
     
     /// Saves the current thermal image to disk as a PNG file.
@@ -152,12 +163,14 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
         // Process temperatures
         let tempResult = temperatureProcessor.getTemperatures(from: baseAddress, bytesPerRow: bytesPerRow)
         CVPixelBufferUnlockBaseAddress(imageBuffer, .readOnly)
+
+        let displayRange = currentDisplayRange(for: tempResult)
         
         // Convert temperatures to a color mapped image
         guard let processedImage = CIImage.fromTemperatures(
                 temperatures: tempResult.temperatures,
-                minTemp: uiState.manualRangeEnabled ? uiState.manualMinTemp : tempResult.min,
-                maxTemp: uiState.manualRangeEnabled ? uiState.manualMaxTemp : tempResult.max,
+                minTemp: displayRange.min,
+                maxTemp: displayRange.max,
                 width: 256,
                 height: 192,
                 scale: SCALE,
@@ -190,6 +203,8 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
             self.maxTemperature = tempResult.max
             self.averageTemperature = tempResult.average
             self.centerTemperature = tempResult.center
+            self.displayMinTemperature = displayRange.min
+            self.displayMaxTemperature = displayRange.max
             self.temperatureHistory = tempResult.temperatureHistory
             self.isProcessing = false
         }
@@ -208,5 +223,82 @@ class Camera: NSObject, ObservableObject, CaptureDelegate {
             height: tempResult.height,
             density: uiState.temperatureGridDensity
         )
+    }
+
+    private func currentDisplayRange(for tempResult: TemperatureResult) -> (min: Float, max: Float) {
+        if lastManualRangeEnabled != uiState.manualRangeEnabled {
+            lastManualRangeEnabled = uiState.manualRangeEnabled
+            if !uiState.manualRangeEnabled {
+                automaticDisplayRange = nil
+            }
+        }
+
+        if uiState.manualRangeEnabled {
+            return normalizedRange(min: uiState.manualMinTemp, max: uiState.manualMaxTemp)
+        }
+
+        return automaticRange(
+            temperatures: tempResult.temperatures,
+            measuredMin: tempResult.min,
+            measuredMax: tempResult.max
+        )
+    }
+
+    private func automaticRange(temperatures: [Float], measuredMin: Float, measuredMax: Float) -> (min: Float, max: Float) {
+        var sample: [Float] = []
+        let strideBy = max(1, temperatures.count / 4096)
+        sample.reserveCapacity((temperatures.count / strideBy) + 1)
+
+        for index in stride(from: 0, to: temperatures.count, by: strideBy) {
+            let value = temperatures[index]
+            if value.isFinite && value > -50 && value < 300 {
+                sample.append(value)
+            }
+        }
+
+        let target: (min: Float, max: Float)
+        if sample.count >= 20 {
+            sample.sort()
+            let lowIndex = Int(Float(sample.count - 1) * 0.02)
+            let highIndex = Int(Float(sample.count - 1) * 0.98)
+            target = normalizedRange(min: sample[lowIndex] - 0.5, max: sample[highIndex] + 0.5)
+        } else {
+            target = normalizedRange(min: measuredMin, max: measuredMax)
+        }
+
+        guard let previous = automaticDisplayRange else {
+            automaticDisplayRange = target
+            return target
+        }
+
+        let smoothing: Float = 0.18
+        let smoothed = normalizedRange(
+            min: previous.min + (target.min - previous.min) * smoothing,
+            max: previous.max + (target.max - previous.max) * smoothing
+        )
+        automaticDisplayRange = smoothed
+        return smoothed
+    }
+
+    private func normalizedRange(min: Float, max: Float) -> (min: Float, max: Float) {
+        let minimumSpan: Float = 5.0
+        var low = min
+        var high = max
+
+        if !low.isFinite || !high.isFinite {
+            return (20, 40)
+        }
+
+        if high < low {
+            swap(&low, &high)
+        }
+
+        if high - low < minimumSpan {
+            let midpoint = (low + high) / 2
+            low = midpoint - minimumSpan / 2
+            high = midpoint + minimumSpan / 2
+        }
+
+        return (low, high)
     }
 }
